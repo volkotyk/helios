@@ -45,7 +45,7 @@ Never push to `upstream` or `english-ui`. A pull request to upstream is a separa
 | `MainActivity.java` | `topBarHidden()`, the two `Actions` methods, `dashboard.setBarCollapsed(...)` after `onBrandHold`. | high |
 | `DashboardView.java` | `arrange` uses `TopBar.gridTop/dotsTop`; `dispatchTouchEvent` calls `trackHold`; `setMessage`, `refreshStatus`, `onBrandHold` and `buildPage` call into the bar logic. The `*Geometry` classes are not changed. | high |
 | `AssistClient.java` | `play` uses `SpeechPlaybackWatchdog` (ported from `english-ui`, see `NOTICE`). | high |
-| `ReleaseInfo.java` | `HELIOS` reads `BuildConfig.RELEASE_REPOSITORY`. | high |
+| `ReleaseInfo.java`, `ReleaseSourceTest.java` | `HELIOS` reads `BuildConfig.RELEASE_REPOSITORY`; the test expects that value. | high |
 | `app/build.gradle` | The fork block at the end of the file. The upstream `versionCode` and `versionName` lines stay unchanged: take the upstream values. | high |
 | `en.json`, `de.json` | Fork keys `Górny pasek`, `ukryty`, `widoczny`. | high |
 | `NOTICE` | Attribution for the ported `english-ui` commit. | high |

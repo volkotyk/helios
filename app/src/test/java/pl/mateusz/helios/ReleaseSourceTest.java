@@ -21,7 +21,7 @@ public class ReleaseSourceTest {
     public void theUpdaterCanPointAtASecondRepository() throws Exception {
         assertEquals("https://api.github.com/repos/SychPL/smartclock2tool/releases/latest",
                 ReleaseInfo.TOOLS.apiUrl());
-        assertEquals("https://api.github.com/repos/SychPL/helios/releases/latest", ReleaseInfo.HELIOS.apiUrl());
+        assertEquals("https://api.github.com/repos/" + BuildConfig.RELEASE_REPOSITORY + "/releases/latest", ReleaseInfo.HELIOS.apiUrl()); // SychPL/helios unless a fork CI build names its own
         assertEquals("smartclock2tool-2.19.0.apk", ReleaseInfo.TOOLS.assetName("2.19.0"));
         assertEquals("pl.mateusz.clockadbprobe", ReleaseInfo.TOOLS.expectedPackage);
     }
