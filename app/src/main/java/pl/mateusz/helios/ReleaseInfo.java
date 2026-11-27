@@ -24,8 +24,8 @@ final class ReleaseInfo {
         String assetName(String version){return String.format(assetPattern,version);}
     }
 
-    /** Helios itself: the source the updater has always used. */
-    static final Source HELIOS=new Source("SychPL/helios","helios-%s.apk","pl.mateusz.helios","Helios");
+    /** Helios itself: SychPL/helios unless the build names another repository (fork CI, see app/build.gradle). */
+    static final Source HELIOS=new Source(BuildConfig.RELEASE_REPOSITORY,"helios-%s.apk","pl.mateusz.helios","Helios");
     /** The clock tools, fetched by the menu entry when they are missing (SPEC 0.12 pkt 6.2). */
     static final Source TOOLS=new Source("SychPL/smartclock2tool","smartclock2tool-%s.apk","pl.mateusz.clockadbprobe","narzędzia zegara");
     private static final Pattern TAG=Pattern.compile("^v([0-9]+\\.[0-9]+\\.[0-9]+)$");
