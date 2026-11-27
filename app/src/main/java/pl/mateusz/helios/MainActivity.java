@@ -131,6 +131,8 @@ public final class MainActivity extends Activity implements AssistClient.Listene
     private Runnable panelRefresh; // re-renders the open cover panel from the latest states (both rows, button availability)
     private AssistClient voice;
     private boolean resumed,busy,recording,pendingVoice,pairing;
+    /** Fork: the top bar choice from the menu (TopBar); off by default, as upstream. */
+    private boolean topBarHidden(){return getSharedPreferences("helios",MODE_PRIVATE).getBoolean("top_bar_hidden",false);}
     private final Runnable tick=new Runnable(){public void run(){
         Date now=new Date();
         Locale language=I18n.locale();
@@ -247,8 +249,15 @@ public final class MainActivity extends Activity implements AssistClient.Listene
                     getSharedPreferences("helios",MODE_PRIVATE).edit().putInt("dark_enter",next).putInt("dark_exit",next+5).apply();
                 applyScreensaver();
             }
+            public String topBarLabel(){return I18n.t("Górny pasek")+": "+(topBarHidden()?I18n.t("ukryty"):I18n.t("widoczny"));}
+            public void topBarToggle(){
+                boolean hidden=!topBarHidden();
+                getSharedPreferences("helios",MODE_PRIVATE).edit().putBoolean("top_bar_hidden",hidden).apply();
+                dashboard.setBarCollapsed(hidden);
+            }
         });
         dashboard.onBrandHold(()->navigation.show());
+        dashboard.setBarCollapsed(topBarHidden());
         String saved=getSharedPreferences("helios",MODE_PRIVATE).getString("connection",null);
         if(saved!=null)try{config=new JSONObject(saved);}catch(Exception ignored){}
         MdiIcons.install(this); // before the cache parse: a version-6 layout names its icons by mdi: catalogue

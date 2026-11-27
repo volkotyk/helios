@@ -51,6 +51,10 @@ public final class DashboardView extends FrameLayout {
     private Map<String,EntityStates.Entity> lastStates;private Map<String,Boolean> lastVisibility;private boolean lastLive;
     private int measuredWidth,measuredHeight;
     private float scale=1;
+    /** Fork: a collapsed bar gives its height to the grid (TopBar); the menu then opens on a long hold anywhere. */
+    private boolean barCollapsed;private long messageUntil;private Runnable brandHold;
+    private final Runnable barRefresh=this::refreshBar,menuHold=this::holdMenu;
+    private float holdX,holdY;private boolean holdFired;
     /** The screen in grid units and the columns its width holds: 800x480 on the clock, 480x480 on a square panel. */
     private int unitsW=WIDTH,unitsH=HEIGHT,columns=DashboardSpec.COLUMNS;
     /** A screen side in grid units: the shorter side is always 480 of them, so the grid fills any screen without bars. */
@@ -130,20 +134,21 @@ public final class DashboardView extends FrameLayout {
         box(brand,24,10,120,32,s);size(brand,17,s);
         box(status,150,10,unitsW-240,32,s);size(status,16,s);
         box(connection,unitsW-56,10,32,32,s);
-        box(dots,unitsW/2f-100,44,200,6,s); // the strip between the bar's text and the first row: above the cards, over nothing
+        box(dots,unitsW/2f-100,TopBar.dotsTop(barCollapsed),200,6,s); // the strip between the bar's text and the first row: above the cards, over nothing
         // 190 of 480 units fills the clock's screen without touching the edges; a narrower screen fits the hour to its width
         size(nightTime,TextFit.fit((text,px)->{monoPaint.setTextSize(px);monoPaint.setLetterSpacing(0);return monoPaint.measureText(text);},"00:00",unitsW-48,190),s);size(nightDate,22,s);
-        float cellW=(unitsW-GAP*(columns+1))/(float)columns,cellH=(unitsH-BAR-GAP*(DashboardSpec.ROWS+1))/(float)DashboardSpec.ROWS;
+        int top=TopBar.gridTop(barCollapsed);
+        float cellW=(unitsW-GAP*(columns+1))/(float)columns,cellH=(unitsH-top-GAP*(DashboardSpec.ROWS+1))/(float)DashboardSpec.ROWS;
         for(Tile tile:tiles.values()){
             DashboardSpec.Item i=tile.item;
             float w=cellW*i.width+GAP*(i.width-1),h=cellH*i.height+GAP*(i.height-1);
-            box(tile,GAP+(i.column-1)*(cellW+GAP),BAR+GAP+(i.row-1)*(cellH+GAP),w,h,s);
+            box(tile,GAP+(i.column-1)*(cellW+GAP),top+GAP+(i.row-1)*(cellH+GAP),w,h,s);
             tile.scale(s,w,h);
         }
         for(AlertsTile tile:alertTiles.values()){
             DashboardSpec.Item i=tile.item;
             float w=cellW*i.width+GAP*(i.width-1),h=cellH*i.height+GAP*(i.height-1);
-            box(tile,GAP+(i.column-1)*(cellW+GAP),BAR+GAP+(i.row-1)*(cellH+GAP),w,h,s);
+            box(tile,GAP+(i.column-1)*(cellW+GAP),top+GAP+(i.row-1)*(cellH+GAP),w,h,s);
             tile.scale(s,w,h);
         }
         overlay.arrange(s,unitsW,unitsH);
@@ -167,7 +172,7 @@ public final class DashboardView extends FrameLayout {
             Tile t=new Tile(item);tiles.put(item.id,t);addView(t,indexOfChild(overlay));
         }
         dots.set(spec.pages.size(),page);
-        overlay.bringToFront();nightLayer.bringToFront();arrange();
+        overlay.bringToFront();nightLayer.bringToFront();arrange();refreshBar(); // new tiles went in above the bar views
         for(String id:pendingIds){Tile t=tiles.get(id);if(t!=null)t.pending(true);}
     }
     /** Swaps the grid to another page and fills it from the last snapshot at once - no wait for the next HA delta. */
@@ -192,7 +197,46 @@ public final class DashboardView extends FrameLayout {
             removeCallbacks(hideDots);removeCallbacks(home);postDelayed(hideDots,1500);
             if(page!=0)postDelayed(home,HOME_AFTER_MS);
         }
+        if(trackHold(e))return true;
         return super.dispatchTouchEvent(e);
+    }
+    /** Fork: with the bar collapsed, a still finger held for TopBar.HOLD_MS opens the menu; true while the rest of that gesture is swallowed. */
+    private boolean trackHold(MotionEvent e){
+        switch(e.getActionMasked()){
+            case MotionEvent.ACTION_DOWN:
+                holdFired=false;removeCallbacks(menuHold);
+                if(barCollapsed&&brandHold!=null&&!overlay.isOpen()&&!nightVisible()){holdX=e.getX();holdY=e.getY();postDelayed(menuHold,TopBar.HOLD_MS);}
+                return false;
+            case MotionEvent.ACTION_MOVE:
+                if(Math.hypot(e.getX()-holdX,e.getY()-holdY)>android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop())removeCallbacks(menuHold);
+                return holdFired;
+            case MotionEvent.ACTION_POINTER_DOWN:removeCallbacks(menuHold);return holdFired;
+            case MotionEvent.ACTION_UP:case MotionEvent.ACTION_CANCEL:
+                removeCallbacks(menuHold);boolean swallowed=holdFired;holdFired=false;return swallowed;
+            default:return holdFired;
+        }
+    }
+    /** The tile under the finger gets CANCEL instead of the tap that finger would end with. */
+    private void holdMenu(){
+        holdFired=true;
+        long now=android.os.SystemClock.uptimeMillis();
+        MotionEvent cancel=MotionEvent.obtain(now,now,MotionEvent.ACTION_CANCEL,holdX,holdY,0);
+        super.dispatchTouchEvent(cancel);cancel.recycle();
+        if(brandHold!=null)brandHold.run();
+    }
+    /** Collapses the bar (the grid takes the whole screen) or brings it back; the caller persists the choice. */
+    public void setBarCollapsed(boolean collapsed){
+        if(collapsed==barCollapsed)return;
+        barCollapsed=collapsed;arrange();refreshBar();
+    }
+    private void refreshBar(){
+        boolean shown=TopBar.shown(barCollapsed,issue,message,android.os.SystemClock.uptimeMillis()<messageUntil);
+        int v=shown?VISIBLE:GONE;
+        bar.setVisibility(v);brand.setVisibility(v);status.setVisibility(v);connection.setVisibility(v);
+        if(shown&&barCollapsed){ // over the grid, under the music overlay and the night clock
+            bar.bringToFront();brand.bringToFront();status.bringToFront();connection.bringToFront();
+            overlay.bringToFront();nightLayer.bringToFront();
+        }
     }
     /** A dialog or the night clock took the screen mid-gesture: the dots go, and the way home restarts from now. */
     @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(!focus){removeCallbacks(hideDots);fadeDots();removeCallbacks(home);}else touched();} // a dialog pauses the way home; closing it starts the full two minutes
@@ -230,10 +274,14 @@ public final class DashboardView extends FrameLayout {
         for(Tile t:tiles.values())if(t.forecastExpiresAt>0&&t.forecastExpiresAt<=now&&lastStates!=null){t.forecastExpiresAt=0;t.render(lastStates,lastLive);}
     }
     public void setIssue(String issue){this.issue=issue;refreshStatus();}
-    public void setMessage(String message){this.message=message==null?"":message;refreshStatus();}
-    private void refreshStatus(){Theme t=Theme.current();status.setText(issue!=null?issue:message);status.setTextColor(issue!=null?t.accent:t.muted);}
+    public void setMessage(String message){
+        this.message=message==null?"":message;
+        if(!this.message.isEmpty()){messageUntil=android.os.SystemClock.uptimeMillis()+TopBar.MESSAGE_MS;removeCallbacks(barRefresh);postDelayed(barRefresh,TopBar.MESSAGE_MS);}
+        refreshStatus();
+    }
+    private void refreshStatus(){Theme t=Theme.current();status.setText(issue!=null?issue:message);status.setTextColor(issue!=null?t.accent:t.muted);refreshBar();}
     public void connected(boolean value){haConnected=value;connection.setImageTintList(ColorStateList.valueOf(value?Theme.HA_CONNECTED:Theme.current().muted));connection.setContentDescription(value?I18n.t("Home Assistant: połączono"):I18n.t("Home Assistant: brak aktualnego połączenia"));}
-    public void onBrandHold(Runnable action){brand.setContentDescription(I18n.t("Helios. Przytrzymaj, aby otworzyć menu."));brand.setOnLongClickListener(v->{action.run();return true;});}
+    public void onBrandHold(Runnable action){brandHold=action;brand.setContentDescription(I18n.t("Helios. Przytrzymaj, aby otworzyć menu."));brand.setOnLongClickListener(v->{action.run();return true;});}
     /** Calls in flight by item id, kept apart from the views: a page rebuilt mid-call shows its spinner again. */
     private final Set<String> pendingIds=new HashSet<>();
     public void pending(String id,boolean on){if(on)pendingIds.add(id);else pendingIds.remove(id);Tile t=tiles.get(id);if(t!=null)t.pending(on);}
