@@ -1,0 +1,133 @@
+# Fork CI (volkotyk/helios): every push to main builds, tests and publishes a signed APK as a GitHub release.
+# Pull requests run the same checks and keep the unsigned APK as a workflow artifact.
+#
+# Release contract (read by the in-app updater, ReleaseInfo.java): a final release, tag vX.Y.Z,
+# exactly one asset helios-X.Y.Z.apk, package pl.mateusz.helios, and a versionCode above the installed one.
+#   X.Y   = major.minor of versionName in app/build.gradle (shared with ha-helios, see README)
+#   Z     = number of commits on main, so it only grows and one commit always maps to one version
+#   code  = 100000 + Z
+# The APK is a debug build, as upstream publishes it (docs/INSTALL.md: `adb shell run-as` needs it),
+# re-signed with the fork key so every release can update the previous one.
+#
+# Required repository secrets for a release (Settings -> Secrets and variables -> Actions):
+#   HELIOS_KEYSTORE_BASE64   base64 of the .jks keystore
+#   HELIOS_KEYSTORE_PASSWORD keystore password
+#   HELIOS_KEY_ALIAS         key alias
+#   HELIOS_KEY_PASSWORD      key password
+# Losing or changing the key breaks in-app updates: clocks must uninstall and reinstall.
+# Release certificate SHA-256: d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      RELEASE: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the commit count is the patch number
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4 # also validates the Gradle wrapper checksum
+
+      - name: Version
+        id: version
+        run: |
+          base=$(sed -nE "s/^[[:space:]]*versionName '([0-9]+)\.([0-9]+)\.[0-9]+'.*/\1.\2/p" app/build.gradle)
+          if [ -z "$base" ]; then echo "::error::Cannot read versionName from app/build.gradle"; exit 1; fi
+          count=$(git rev-list --count HEAD)
+          name="$base.$count"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          if [ "$RELEASE" = "true" ]; then
+            echo "args=-PheliosVersionName=$name -PheliosVersionCode=$((100000 + count)) -PheliosReleaseRepository=${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Version: $name (release: $RELEASE)"
+
+      - name: Test, lint and build
+        run: ./gradlew --stacktrace testDebugUnitTest lintDebug assembleDebug ${{ steps.version.outputs.args }}
+
+      - name: Keep reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Keep unsigned APK
+        if: env.RELEASE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-${{ steps.version.outputs.name }}-unsigned
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Sign APK
+        if: env.RELEASE == 'true'
+        env:
+          HELIOS_KEYSTORE_BASE64: ${{ secrets.HELIOS_KEYSTORE_BASE64 }}
+          HELIOS_KEYSTORE_PASSWORD: ${{ secrets.HELIOS_KEYSTORE_PASSWORD }}
+          HELIOS_KEY_ALIAS: ${{ secrets.HELIOS_KEY_ALIAS }}
+          HELIOS_KEY_PASSWORD: ${{ secrets.HELIOS_KEY_PASSWORD }}
+          NAME: ${{ steps.version.outputs.name }}
+          RELEASE_CERT_SHA256: d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19
+        run: |
+          for s in HELIOS_KEYSTORE_BASE64 HELIOS_KEYSTORE_PASSWORD HELIOS_KEY_ALIAS HELIOS_KEY_PASSWORD; do
+            if [ -z "${!s}" ]; then echo "::error::Secret $s is not set; see the header of .github/workflows/android.yml"; exit 1; fi
+          done
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          keystore="$RUNNER_TEMP/helios.jks"
+          printf '%s' "$HELIOS_KEYSTORE_BASE64" | base64 -d > "$keystore"
+          "$tools/apksigner" sign --ks "$keystore" --ks-key-alias "$HELIOS_KEY_ALIAS" \
+            --ks-pass env:HELIOS_KEYSTORE_PASSWORD --key-pass env:HELIOS_KEY_PASSWORD \
+            --out "helios-$NAME.apk" app/build/outputs/apk/debug/app-debug.apk
+          rm -f "$keystore"
+          certs=$("$tools/apksigner" verify --print-certs "helios-$NAME.apk")
+          echo "$certs" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+          if ! echo "$certs" | grep -q "SHA-256 digest: $RELEASE_CERT_SHA256"; then
+            echo "::error::APK is not signed with the release certificate $RELEASE_CERT_SHA256; clocks would refuse the update"; exit 1
+          fi
+          badging=$("$tools/aapt2" dump badging "helios-$NAME.apk" | head -1)
+          echo "$badging"
+          case "$badging" in
+            *"name='pl.mateusz.helios'"*"versionName='$NAME'"*) ;;
+            *) echo "::error::APK package or versionName does not match $NAME"; exit 1 ;;
+          esac
+
+      - name: Publish release
+        if: env.RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.version.outputs.name }}
+        run: |
+          if gh release view "v$NAME" >/dev/null 2>&1; then
+            echo "::notice::Release v$NAME already exists; nothing to publish"
+            exit 0
+          fi
+          gh release create "v$NAME" "helios-$NAME.apk" --target "$GITHUB_SHA" \
+            --title "Helios $NAME" --generate-notes --latest

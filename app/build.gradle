@@ -25,3 +25,24 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'
 }
+
+// --- Fork (volkotyk/helios) -------------------------------------------------------------------------------------
+// CI release overrides, kept apart from the upstream blocks so `git merge upstream/main` stays clean.
+// Without the properties a build is identical to upstream: version from defaultConfig, updates from SychPL/helios.
+//   -PheliosReleaseRepository=owner/name  GitHub repository the in-app updater reads (ReleaseInfo.HELIOS)
+//   -PheliosVersionName=X.Y.Z -PheliosVersionCode=N  per-build version, see .github/workflows/android.yml
+def heliosReleaseRepository = providers.gradleProperty('heliosReleaseRepository').getOrElse('SychPL/helios')
+if (!(heliosReleaseRepository ==~ /[A-Za-z0-9-]+\/[A-Za-z0-9._-]+/)) throw new GradleException("heliosReleaseRepository must be owner/name: $heliosReleaseRepository")
+android {
+    defaultConfig { buildConfigField 'String', 'RELEASE_REPOSITORY', "\"$heliosReleaseRepository\"" }
+}
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def name = providers.gradleProperty('heliosVersionName')
+        def code = providers.gradleProperty('heliosVersionCode')
+        variant.outputs.each { output ->
+            if (name.present) output.versionName.set(name)
+            if (code.present) output.versionCode.set(code.map { it as Integer })
+        }
+    }
+}

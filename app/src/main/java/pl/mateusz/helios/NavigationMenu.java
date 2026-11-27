@@ -29,7 +29,9 @@ final class NavigationMenu {
     private String status="";
     interface Actions {void talk();void cancel();void pair();void device();void update();void tools();
         /** Label with the live reading, and a tap that steps the darkness threshold (SPEC 0.13 pkt 3). */
-        String screensaverLabel();void screensaverStep();}
+        String screensaverLabel();void screensaverStep();
+        /** Fork: label with the current state, and a tap that collapses or restores the top bar (TopBar). */
+        String topBarLabel();void topBarToggle();}
     private final Actions actions;
     NavigationMenu(Activity activity,java.util.function.Supplier<org.json.JSONObject> connection,java.util.function.BooleanSupplier updateBusy,Actions actions){this.activity=activity;this.connection=connection;this.updateBusy=updateBusy;this.actions=actions;}
     private int dp(int n){return Math.round(n*activity.getResources().getDisplayMetrics().density);}
@@ -60,6 +62,8 @@ final class NavigationMenu {
         button(rows,I18n.t("Narzędzia zegara"),()->{close();actions.tools();});
         Button screensaver=button(rows,actions.screensaverLabel(),()->{});
         screensaver.setOnClickListener(v->{actions.screensaverStep();screensaver.setText(actions.screensaverLabel());}); // stays open: the threshold is picked by watching the reading
+        Button topBar=button(rows,actions.topBarLabel(),()->{});
+        topBar.setOnClickListener(v->{actions.topBarToggle();topBar.setText(actions.topBarLabel());}); // stays open: the grid changes behind the dim
         button(rows,I18n.t("Konfiguracja ekranu w HA"),()->openHa(true));
         button(rows,I18n.t("Strona główna HA"),()->openHa(false));
         button(rows,I18n.t("Ustawienia zegara"),()->open(new Intent(Settings.ACTION_SETTINGS)));
@@ -87,6 +91,7 @@ final class NavigationMenu {
             case "pl":selected="Polski";break;
             case "en":selected="English";break;
             case "de":selected="Deutsch";break;
+            case "uk":selected="Українська";break;
             default:selected=I18n.t("Automatycznie");
         }
         return I18n.t("Język")+": "+selected;
