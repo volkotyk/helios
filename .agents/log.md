@@ -2,6 +2,13 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-27] fix | first main CI run failed in ReleaseSourceTest
+- Root cause: `ReleaseSourceTest` compared `ReleaseInfo.HELIOS.apiUrl()` with the literal `SychPL/helios`; the main build passes `-PheliosReleaseRepository=volkotyk/helios`. The PR run did not pass the properties, so it stayed green. No release was published.
+- Fix: the test expects `BuildConfig.RELEASE_REPOSITORY`. Pull request runs now use the same Gradle properties as main; only signing and publishing differ.
+- Verified locally: the full CI command with the release properties, and the tests without them.
+- roles: Debugger, DevOps / Build Engineer, QA Engineer
+- fork-only: yes; upstream files touched: `ReleaseSourceTest.java`
+
 ## [2026-11-27] release | fork signing key and CI secrets
 - Generated an RSA 4096 PKCS12 key (alias `helios`, 10000 days, `CN=Helios, O=volkotyk/helios`). Certificate SHA-256 `d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19`.
 - Set `HELIOS_KEYSTORE_BASE64`, `HELIOS_KEYSTORE_PASSWORD`, `HELIOS_KEY_ALIAS`, `HELIOS_KEY_PASSWORD` on `volkotyk/helios`. Checked the base64 round trip and an `apksigner sign` + `verify` of the debug APK with the same flags as the workflow.

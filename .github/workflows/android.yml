@@ -60,9 +60,8 @@ jobs:
           count=$(git rev-list --count HEAD)
           name="$base.$count"
           echo "name=$name" >> "$GITHUB_OUTPUT"
-          if [ "$RELEASE" = "true" ]; then
-            echo "args=-PheliosVersionName=$name -PheliosVersionCode=$((100000 + count)) -PheliosReleaseRepository=${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
-          fi
+          # pull requests build with the same properties as main, so only signing and publishing differ
+          echo "args=-PheliosVersionName=$name -PheliosVersionCode=$((100000 + count)) -PheliosReleaseRepository=${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
           echo "Version: $name (release: $RELEASE)"
 
       - name: Test, lint and build
