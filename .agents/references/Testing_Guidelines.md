@@ -45,6 +45,12 @@ There are no instrumentation tests (`app/src/androidTest/` does not exist) and n
 | i18n code change | `TranslationsTest`, plus the key-parity check in the localization role |
 | Audio, microphone, dock lamp, light sensor | Manual device check, reported as skipped when no clock is available |
 
+## Known flaky tests
+
+| Test | Symptom | Evidence | Action |
+|---|---|---|---|
+| `HeliosDeviceClientTest.commandsAreValidatedExecutedAndAnsweredWithBusyPerResource` | `AssertionError: no result r2` after the 5 s wait in `result()` | Upstream test on a real loopback WebSocket. The same tree passed on PR #3 and failed on `main` run 46081602434 (GitHub runner, 2026-11-27). | Rerun the failed job once. A second failure is a real regression: investigate `HeliosDeviceClient`. |
+
 ## Reporting
 
 Each final task note states:

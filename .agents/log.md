@@ -2,6 +2,13 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-27] test | upstream HeliosDeviceClientTest is flaky on CI
+- The second `main` run failed in `HeliosDeviceClientTest.commandsAreValidatedExecutedAndAnsweredWithBusyPerResource` (`no result r2`). The same tree passed on PR #3. The fork does not change this test or `HeliosDeviceClient`.
+- Recorded in Testing_Guidelines.md § Known flaky tests: rerun once, investigate on a second failure.
+- roles: QA Engineer, Debugger
+- fork-only: yes; upstream files touched: none
+- pages: `.agents/references/Testing_Guidelines.md`
+
 ## [2026-11-27] fix | first main CI run failed in ReleaseSourceTest
 - Root cause: `ReleaseSourceTest` compared `ReleaseInfo.HELIOS.apiUrl()` with the literal `SychPL/helios`; the main build passes `-PheliosReleaseRepository=volkotyk/helios`. The PR run did not pass the properties, so it stayed green. No release was published.
 - Fix: the test expects `BuildConfig.RELEASE_REPOSITORY`. Pull request runs now use the same Gradle properties as main; only signing and publishing differ.
