@@ -2,6 +2,14 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-27] release | fork signing key and CI secrets
+- Generated an RSA 4096 PKCS12 key (alias `helios`, 10000 days, `CN=Helios, O=volkotyk/helios`). Certificate SHA-256 `d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19`.
+- Set `HELIOS_KEYSTORE_BASE64`, `HELIOS_KEYSTORE_PASSWORD`, `HELIOS_KEY_ALIAS`, `HELIOS_KEY_PASSWORD` on `volkotyk/helios`. Checked the base64 round trip and an `apksigner sign` + `verify` of the debug APK with the same flags as the workflow.
+- The keystore and passwords stay outside the repository with the owner.
+- roles: DevOps / Build Engineer, Security Analyst
+- fork-only: yes; upstream files touched: none
+- pages: `.agents/memory/CURRENT.md`, `.agents/skills/project-release-checklist/SKILL.md`
+
 ## [2026-11-27] release | CI workflow builds, signs and publishes the APK from main
 - `.github/workflows/android.yml`: tests, lint and `assembleDebug` on pull requests and pushes; on `main` it re-signs the debug APK with the `HELIOS_KEYSTORE_*` secrets and creates release `vX.Y.Z` with `helios-X.Y.Z.apk`.
 - Version per build: `X.Y` from `versionName`, patch = `git rev-list --count HEAD`, `versionCode` = 100000 + patch. A second run on the same commit skips the existing release.

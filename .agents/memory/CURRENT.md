@@ -33,12 +33,13 @@ Orientation only. Dated status goes to `.agents/log.md`. Keep this file under 8 
 |---|---|---|
 | Ukrainian UI | `uk.json`, `Translations.CATALOGUES` | Unit tests pass. Not checked on a clock. |
 | Hideable top bar | `TopBar`, `DashboardView`, menu entry `Górny pasek` (pref `top_bar_hidden`, default off) | Collapsed: the grid takes the full height, a hold of `TopBar.HOLD_MS` anywhere opens the menu, an issue or a fresh status message shows the bar over the grid. Not checked on a clock. |
-| CI release | `.github/workflows/android.yml`, fork block in `app/build.gradle` | Needs the four signing secrets before the first release. |
+| CI release | `.github/workflows/android.yml`, fork block in `app/build.gradle` | Signing secrets set on 2026-11-27. Release certificate SHA-256: `d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19` (`CN=Helios, O=volkotyk/helios`). The owner keeps the keystore and its passwords outside the repository. |
 | Assist speech watchdog | `SpeechPlaybackWatchdog` (from `english-ui` `fda65d1`) | A long TTS answer is no longer cut at 30 s. |
 
 ## Open risks
 
-- The signing secrets are not set yet. A push to `main` then fails at "Sign APK". A clock with an upstream (SychPL-signed) build cannot update to a fork build: uninstall it first.
+- A clock with an upstream (SychPL-signed) build cannot update to a fork build: uninstall it first.
+- A lost keystore or password ends in-app updates for every fork clock. Only the owner's offline copy exists; GitHub secrets cannot be read back.
 - With the bar collapsed, the climate panel and the fullscreen music view keep their upstream position under the bar height, so a 52-unit strip of the grid stays visible above them.
 - `AlertsDrawer` picks the plural form for 2-4 only. Polish and Ukrainian are wrong for 22-24, Ukrainian also for 21, 31. Upstream code; not changed.
 

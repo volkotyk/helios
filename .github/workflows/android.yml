@@ -15,6 +15,7 @@
 #   HELIOS_KEY_ALIAS         key alias
 #   HELIOS_KEY_PASSWORD      key password
 # Losing or changing the key breaks in-app updates: clocks must uninstall and reinstall.
+# Release certificate SHA-256: d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19
 name: Android
 
 on:
@@ -94,6 +95,7 @@ jobs:
           HELIOS_KEY_ALIAS: ${{ secrets.HELIOS_KEY_ALIAS }}
           HELIOS_KEY_PASSWORD: ${{ secrets.HELIOS_KEY_PASSWORD }}
           NAME: ${{ steps.version.outputs.name }}
+          RELEASE_CERT_SHA256: d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19
         run: |
           for s in HELIOS_KEYSTORE_BASE64 HELIOS_KEYSTORE_PASSWORD HELIOS_KEY_ALIAS HELIOS_KEY_PASSWORD; do
             if [ -z "${!s}" ]; then echo "::error::Secret $s is not set; see the header of .github/workflows/android.yml"; exit 1; fi
@@ -105,7 +107,11 @@ jobs:
             --ks-pass env:HELIOS_KEYSTORE_PASSWORD --key-pass env:HELIOS_KEY_PASSWORD \
             --out "helios-$NAME.apk" app/build/outputs/apk/debug/app-debug.apk
           rm -f "$keystore"
-          "$tools/apksigner" verify --print-certs "helios-$NAME.apk" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+          certs=$("$tools/apksigner" verify --print-certs "helios-$NAME.apk")
+          echo "$certs" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+          if ! echo "$certs" | grep -q "SHA-256 digest: $RELEASE_CERT_SHA256"; then
+            echo "::error::APK is not signed with the release certificate $RELEASE_CERT_SHA256; clocks would refuse the update"; exit 1
+          fi
           badging=$("$tools/aapt2" dump badging "helios-$NAME.apk" | head -1)
           echo "$badging"
           case "$badging" in

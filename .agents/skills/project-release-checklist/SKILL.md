@@ -11,6 +11,7 @@ Use this skill before a Helios release, or before a change to the release workfl
 
 - The signing key must stay the same for every release. Android refuses an update that is signed with a different key, and the clock then keeps the old version. Releases are debug builds (see `docs/INSTALL.md`). The fork workflow `.github/workflows/android.yml` re-signs the debug APK with the key from the `HELIOS_KEYSTORE_*` and `HELIOS_KEY_*` secrets.
 - Never commit a keystore. `.gitignore` ignores `*.keystore` and `*.jks`.
+- The fork release certificate has SHA-256 `d51bedb4f1df539b9148a342db8d703694bf956f43f3af460dc5cd377c46aa19`. The workflow prints the digest of every signed APK; a different digest is a blocking issue.
 - `ReleaseInfo.HELIOS` reads `BuildConfig.RELEASE_REPOSITORY`. A local build keeps `SychPL/helios`. The fork workflow passes `-PheliosReleaseRepository=<owner/name>` (see the fork block at the end of `app/build.gradle`).
 - The fork workflow sets the version per build: `X.Y` from `versionName`, patch = commit count of `main`, `versionCode` = 100000 + patch. Do not rewrite `main` history: a lower commit count gives a lower version, and the updater then ignores the release.
 
