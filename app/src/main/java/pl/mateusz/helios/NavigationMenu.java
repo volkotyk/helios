@@ -91,6 +91,7 @@ final class NavigationMenu {
             case "pl":selected="Polski";break;
             case "en":selected="English";break;
             case "de":selected="Deutsch";break;
+            case "uk":selected="Українська";break;
             default:selected=I18n.t("Automatycznie");
         }
         return I18n.t("Język")+": "+selected;

@@ -5,21 +5,27 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /** App-wide language choice; Polish source strings remain the fallback. */
 final class I18n {
-    private static volatile Translations catalogue=new Translations(Collections.emptyMap(),Collections.emptyMap());
+    private static volatile Translations catalogue=new Translations(Collections.emptyMap());
     private static volatile String choice="pl";
     private I18n(){}
 
     static void init(Context context) {
         choice=context.getSharedPreferences("helios",Context.MODE_PRIVATE).getString("language","auto");
-        try {
-            catalogue=Translations.fromJson(read(context,"i18n/en.json"),read(context,"i18n/de.json"));
-        } catch(Exception error) {
-            android.util.Log.e("Helios", "Could not load translations", error);
+        Map<String,Map<String,String>> loaded=new HashMap<>();
+        for(String language:Translations.CATALOGUES) {
+            try {
+                loaded.put(language,Translations.parse(read(context,"i18n/"+language+".json")));
+            } catch(Exception error) {
+                android.util.Log.e("Helios", "Could not load translations: "+language, error); // one broken catalogue falls back to Polish alone
+            }
         }
+        catalogue=new Translations(loaded);
     }
 
     private static String read(Context context,String path) throws Exception {
@@ -34,7 +40,7 @@ final class I18n {
     static String choice(){return choice;}
     static Locale locale() {return Translations.locale(choice,Locale.getDefault());}
     static void choose(Context context,String language) {
-        if(!"auto".equals(language)&&!"pl".equals(language)&&!"en".equals(language)&&!"de".equals(language))
+        if(!Translations.choices().contains(language))
             throw new IllegalArgumentException("Unsupported language");
         context.getSharedPreferences("helios",Context.MODE_PRIVATE).edit().putString("language",language).apply();
         choice=language;
