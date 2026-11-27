@@ -2,6 +2,18 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-27] feature | automatic update check with a one-tap install
+- New pure class `UpdateCheck` (+ `UpdateCheckTest`): first check 2 min after the service starts, then every 6 h; each failure doubles the wait from 15 min up to 6 h; never sooner than 2 min. It offers a stored version only while it is newer than `BuildConfig.VERSION_NAME`, so an installed update clears the offer.
+- New glue `UpdateWatch` in `HeliosService`: calls the new `Updater.latest()` (metadata only, the same `ReleaseInfo.parse` and `Updater.decision`, no status, no download) on the `network` executor. Prefs in `helios`: `update_check_off`, `update_checked_at`, `update_check_failures`, `update_found`. The attempt time is stored before the request, so a restart loop cannot exceed the limit.
+- `DashboardView`: button `Aktualizuj X.Y.Z` in the bar left of the HA icon; a tap runs `HeliosService.update()` (`Updater.run()`, all checks unchanged). Touch area: the bar and the gap under it, 60 units high (under the 64-unit guideline; the bar is 52). Collapsed bar: `TopBar.shown` has a 5-argument form, so each find brings the bar back for 8 s.
+- `MainActivity.onDestroy` clears the update listener next to the music and appearance listeners, so the service does not keep the old dashboard.
+- Menu: `Aktualizacja Heliosa` reads `Zainstaluj nową wersję Heliosa: X.Y.Z` while there is an offer; new entry `Sprawdzanie aktualizacji: włączone/wyłączone`.
+- Security review: no new host, permission or install path. A non-200 answer (also a GitHub rate limit) reads as "nothing new" and keeps an earlier find; only an `IOException` or another exception counts as a failure.
+- Verified: `testDebugUnitTest assembleDebug lintDebug`, also with `-PheliosVersionName=0.21.999 -PheliosVersionCode=100999 -PheliosReleaseRepository=volkotyk/helios`. Not checked on a clock: the bar button, the system install confirmation, the behavior after reboot.
+- roles: Android Developer, Frontend Developer, Security Analyst, Localization Translator, QA Engineer, Critic
+- fork-only: yes; upstream files touched: `Updater.java`, `HeliosService.java`, `MainActivity.java`, `DashboardView.java`, `NavigationMenu.java`, `en.json`, `de.json`
+- pages: `.agents/memory/CURRENT.md`, `.agents/rules/fork-upstream-sync.md`, `.agents/references/System_Map.md`
+
 ## [2026-11-27] fix | first main CI run failed in ReleaseSourceTest
 - Root cause: `ReleaseSourceTest` compared `ReleaseInfo.HELIOS.apiUrl()` with the literal `SychPL/helios`; the main build passes `-PheliosReleaseRepository=volkotyk/helios`. The PR run did not pass the properties, so it stayed green. No release was published.
 - Fix: the test expects `BuildConfig.RELEASE_REPOSITORY`. Pull request runs now use the same Gradle properties as main; only signing and publishing differ.

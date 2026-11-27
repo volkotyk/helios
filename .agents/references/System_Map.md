@@ -76,6 +76,7 @@ Helios is a Home Assistant dashboard and voice satellite for the Lenovo Smart Cl
 |---|---|
 | `DockController`, `LampMath` | Dock lamp and charger through the OEM accessory binder (`docs/lamp-control.md`). |
 | `Updater`, `ReleaseInfo`, `Version` | GitHub Releases updater. `ReleaseInfo.HELIOS` reads `BuildConfig.RELEASE_REPOSITORY` (default `SychPL/helios`; the fork CI sets its own repository). |
+| `UpdateCheck`, `UpdateWatch` | Fork: automatic update check. `UpdateCheck` (pure) decides the wait and the offered version; `UpdateWatch` (service glue) calls `Updater.latest` every 6 h and feeds the bar button in `DashboardView`. |
 | `ToolsBridge`, `ToolsCall`, `ToolsTrust`, `ToolsState`, `ToolsMenu` | Bridge to the clock tools app `pl.mateusz.clockadbprobe` from `SychPL/smartclock2tool` (SPEC 0.12). |
 | `I18n`, `Translations` | Language choice and catalogues from `app/src/main/assets/i18n/`. Polish keys are the fallback. |
 

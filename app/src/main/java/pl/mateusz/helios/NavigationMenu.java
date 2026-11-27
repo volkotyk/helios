@@ -31,7 +31,9 @@ final class NavigationMenu {
         /** Label with the live reading, and a tap that steps the darkness threshold (SPEC 0.13 pkt 3). */
         String screensaverLabel();void screensaverStep();
         /** Fork: label with the current state, and a tap that collapses or restores the top bar (TopBar). */
-        String topBarLabel();void topBarToggle();}
+        String topBarLabel();void topBarToggle();
+        /** Fork: the update entry names a version found by UpdateCheck; label and toggle of that automatic check. */
+        String updateLabel();String updateCheckLabel();void updateCheckToggle();}
     private final Actions actions;
     NavigationMenu(Activity activity,java.util.function.Supplier<org.json.JSONObject> connection,java.util.function.BooleanSupplier updateBusy,Actions actions){this.activity=activity;this.connection=connection;this.updateBusy=updateBusy;this.actions=actions;}
     private int dp(int n){return Math.round(n*activity.getResources().getDisplayMetrics().density);}
@@ -70,8 +72,10 @@ final class NavigationMenu {
         button(rows,I18n.t("Dostępność"),()->open(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         button(rows,I18n.t("Ekran główny"),()->open(new Intent(Settings.ACTION_HOME_SETTINGS)));
         button(rows,I18n.t("Aplikacje"),this::apps);
-        Button update=button(rows,I18n.t("Aktualizacja Heliosa"),()->{close();actions.update();});
+        Button update=button(rows,actions.updateLabel(),()->{close();actions.update();});
         update.setEnabled(!updateBusy.getAsBoolean()); // the menu is rebuilt on every open and busy() is computed on demand, so this is always current
+        Button updateCheck=button(rows,actions.updateCheckLabel(),()->{});
+        updateCheck.setOnClickListener(v->{actions.updateCheckToggle();updateCheck.setText(actions.updateCheckLabel());update.setText(actions.updateLabel());});
         dialog.setContentView(panel);
         Window window=dialog.getWindow();
         if(window!=null){

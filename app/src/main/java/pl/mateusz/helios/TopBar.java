@@ -19,4 +19,8 @@ final class TopBar {
     static boolean shown(boolean collapsed,String issue,String message,boolean fresh){
         return !collapsed||issue!=null||(fresh&&message!=null&&!message.isEmpty());
     }
+    /** The same, plus an update notice (UpdateCheck) that is still fresh: it brings a collapsed bar back for MESSAGE_MS, so its button can be tapped. */
+    static boolean shown(boolean collapsed,String issue,String message,boolean fresh,boolean updateFresh){
+        return shown(collapsed,issue,message,fresh)||updateFresh;
+    }
 }

@@ -68,6 +68,11 @@ final class Updater {
     }
     /** Menu entry; network thread. Updates Helios itself. */
     void run(){run(ReleaseInfo.HELIOS,versionName);}
+    /** Fork (UpdateCheck): the newer release version of Helios, or null; network thread. Metadata only: no status, no download. */
+    String latest() throws IOException {
+        ReleaseInfo info=ReleaseInfo.parse(host.release(ReleaseInfo.HELIOS),ReleaseInfo.HELIOS);
+        return info!=null&&"newer".equals(decision(info.version,versionName))?info.version:null;
+    }
 
     /**
      * Fetches and installs one release of the given source (SPEC 0.12 pkt 6.2). Helios updates itself with its own

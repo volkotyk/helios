@@ -90,6 +90,7 @@ public final class MainActivity extends Activity implements AssistClient.Listene
             service.setOnAuthInvalid(()->dashboard.setMessage(I18n.t("HA odrzucił token - sparuj ponownie")));
             service.setOnChannelIssue(text->dashboard.setMessage(text));
             service.setOnStatus(text->dashboard.setMessage(text));
+            service.updateWatch().setListener(dashboard::setUpdate); // fork: UpdateCheck
             service.setMusicListener(snapshot->{
                 musicActive=snapshot.ui!=MusicSession.Ui.NONE; // a paused queue is still listening, so it blocks too
                 dashboard.musicInfo(snapshot.remoteInfo);
@@ -255,8 +256,12 @@ public final class MainActivity extends Activity implements AssistClient.Listene
                 getSharedPreferences("helios",MODE_PRIVATE).edit().putBoolean("top_bar_hidden",hidden).apply();
                 dashboard.setBarCollapsed(hidden);
             }
+            public String updateLabel(){String v=service==null?null:service.updateWatch().available();return v==null?I18n.t("Aktualizacja Heliosa"):I18n.t("Zainstaluj nową wersję Heliosa: ")+v;}
+            public String updateCheckLabel(){return I18n.t("Sprawdzanie aktualizacji")+": "+(service==null||service.updateWatch().enabled()?I18n.t("włączone"):I18n.t("wyłączone"));}
+            public void updateCheckToggle(){if(service!=null)service.updateWatch().setEnabled(!service.updateWatch().enabled());}
         });
         dashboard.onBrandHold(()->navigation.show());
+        dashboard.onUpdateTap(()->{if(service!=null)service.update();}); // fork: one tap runs the same updater as the menu entry
         dashboard.setBarCollapsed(topBarHidden());
         String saved=getSharedPreferences("helios",MODE_PRIVATE).getString("connection",null);
         if(saved!=null)try{config=new JSONObject(saved);}catch(Exception ignored){}
@@ -290,7 +295,7 @@ public final class MainActivity extends Activity implements AssistClient.Listene
         detachHa();stopWake();main.removeCallbacks(tick);if(voice!=null)voice.cancel();super.onPause();}
     @Override public void onDestroy(){main.removeCallbacks(toolsPoll);if(navigation!=null)navigation.close();closePanel();closeOnboarding();if(library!=null)library.close();
         // the service outlives this activity: a listener left behind holds the old view and its bitmaps
-        if(service!=null){service.setMusicListener(null);service.setAppearanceListener(null);}detachHa();try{unbindService(serviceConnection);}catch(IllegalArgumentException ignored){}stopWake();if(voice!=null)voice.cancel();audio.shutdown();network.shutdownNow();diagnostics.shutdown();super.onDestroy();}
+        if(service!=null){service.setMusicListener(null);service.setAppearanceListener(null);if(service.updateWatch()!=null)service.updateWatch().setListener(null);}detachHa();try{unbindService(serviceConnection);}catch(IllegalArgumentException ignored){}stopWake();if(voice!=null)voice.cancel();audio.shutdown();network.shutdownNow();diagnostics.shutdown();super.onDestroy();}
     private void manualTalk(){
         if(config==null||config.optBoolean("auth_invalid",false)){connect();return;}
         if(busy){if(recording)voice.finishSpeech();else voice.cancel();return;}

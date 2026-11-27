@@ -114,10 +114,11 @@ public final class HeliosService extends Service {
         if(connection!=null){startHa();startMusic();}
         updater=new Updater(new Updater.AndroidHost(this,text->main.post(()->{if(onStatus!=null)onStatus.accept(text);})),BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE);
         network.execute(updater::restore); // a leftover update operation without a sealed session is dropped
+        updateWatch=new UpdateWatch(getSharedPreferences("helios",MODE_PRIVATE),main,network,updater);updateWatch.start(); // fork: automatic check (UpdateCheck)
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId){return START_STICKY;}
     @Override public IBinder onBind(Intent intent){return binder;}
-    @Override public void onDestroy(){stopHa();stopMusic();dock.stop();volume.stop();network.shutdownNow();super.onDestroy();}
+    @Override public void onDestroy(){if(updateWatch!=null)updateWatch.stop();stopHa();stopMusic();dock.stop();volume.stop();network.shutdownNow();super.onDestroy();}
 
     JSONObject connection(){return connection;}
     HaDashboardClient ha(){return ha;}
@@ -580,6 +581,8 @@ public final class HeliosService extends Service {
     private java.util.function.Consumer<String> onStatus;
     private Updater updater; // built in onCreate: a Service has no Context before it is attached
     Updater updater(){return updater;}
+    private UpdateWatch updateWatch; // fork: built in onCreate after the updater
+    UpdateWatch updateWatch(){return updateWatch;}
     void setOnStatus(java.util.function.Consumer<String> c){onStatus=c;}
     /** Menu → "Aktualizacja Heliosa" (SPEC 0.10 pkt 7); one operation at a time, the updater says so itself. */
     void update(){network.execute(updater::run);}
