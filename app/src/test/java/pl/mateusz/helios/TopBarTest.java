@@ -25,6 +25,12 @@ public class TopBarTest {
         assertFalse(TopBar.shown(true,null,"Odpowiadam…",false));
     }
 
+    @Test public void collapsedBarShowsAFreshUpdateNoticeOnly() {
+        assertTrue(TopBar.shown(true,null,"",false,true));
+        assertFalse(TopBar.shown(true,null,"",false,false));
+        assertTrue(TopBar.shown(false,null,"",false,false));
+    }
+
     @Test public void collapsedGridStartsAtTheTopEdge() {
         assertEquals(DashboardView.BAR,TopBar.gridTop(false));
         assertEquals(0,TopBar.gridTop(true));

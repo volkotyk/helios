@@ -55,6 +55,8 @@ public final class DashboardView extends FrameLayout {
     private boolean barCollapsed;private long messageUntil;private Runnable brandHold;
     private final Runnable barRefresh=this::refreshBar,menuHold=this::holdMenu;
     private float holdX,holdY;private boolean holdFired;
+    /** Fork: the button that installs a newer Helios found by UpdateCheck; it lives in the bar and shows only while there is one. */
+    private final TextView updateBadge;private String updateVersion;private long updateUntil;
     /** The screen in grid units and the columns its width holds: 800x480 on the clock, 480x480 on a square panel. */
     private int unitsW=WIDTH,unitsH=HEIGHT,columns=DashboardSpec.COLUMNS;
     /** A screen side in grid units: the shorter side is always 480 of them, so the grid fills any screen without bars. */
@@ -74,6 +76,7 @@ public final class DashboardView extends FrameLayout {
         brand=text("HELIOS",sans);brand.setLetterSpacing(.18f);
         status=text("",sans);status.setMaxLines(1);status.setEllipsize(TextUtils.TruncateAt.END);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         connection=new ImageView(context);connection.setImageResource(R.drawable.ic_home_assistant);addView(connection);
+        updateBadge=text("",sans);updateBadge.setGravity(Gravity.CENTER);updateBadge.setMaxLines(1);updateBadge.setEllipsize(TextUtils.TruncateAt.END);updateBadge.setVisibility(GONE);
         dots=new PageDots(context);addView(dots);
         overlay=new MusicOverlay(context,sans,mono);addView(overlay);
         // Night clock (SPEC 0.13): a lid over everything, not a separate screen - the panel keeps its state
@@ -112,6 +115,7 @@ public final class DashboardView extends FrameLayout {
     public void applyTheme(){
         Theme t=Theme.current();
         setBackgroundColor(t.background);bar.setBackgroundColor(t.background);brand.setTextColor(t.muted);dots.invalidate();refreshStatus();connected(haConnected);
+        arrangeBadge(scale);
         for(Tile tile:tiles.values())tile.theme();
         for(AlertsTile tile:alertTiles.values())tile.theme();
         overlay.applyTheme();
@@ -134,6 +138,7 @@ public final class DashboardView extends FrameLayout {
         box(brand,24,10,120,32,s);size(brand,17,s);
         box(status,150,10,unitsW-240,32,s);size(status,16,s);
         box(connection,unitsW-56,10,32,32,s);
+        arrangeBadge(s);
         box(dots,unitsW/2f-100,TopBar.dotsTop(barCollapsed),200,6,s); // the strip between the bar's text and the first row: above the cards, over nothing
         // 190 of 480 units fills the clock's screen without touching the edges; a narrower screen fits the hour to its width
         size(nightTime,TextFit.fit((text,px)->{monoPaint.setTextSize(px);monoPaint.setLetterSpacing(0);return monoPaint.measureText(text);},"00:00",unitsW-48,190),s);size(nightDate,22,s);
@@ -230,11 +235,13 @@ public final class DashboardView extends FrameLayout {
         barCollapsed=collapsed;arrange();refreshBar();
     }
     private void refreshBar(){
-        boolean shown=TopBar.shown(barCollapsed,issue,message,android.os.SystemClock.uptimeMillis()<messageUntil);
+        long now=android.os.SystemClock.uptimeMillis();
+        boolean shown=TopBar.shown(barCollapsed,issue,message,now<messageUntil,updateVersion!=null&&now<updateUntil);
         int v=shown?VISIBLE:GONE;
         bar.setVisibility(v);brand.setVisibility(v);status.setVisibility(v);connection.setVisibility(v);
+        updateBadge.setVisibility(shown&&updateVersion!=null?VISIBLE:GONE);
         if(shown&&barCollapsed){ // over the grid, under the music overlay and the night clock
-            bar.bringToFront();brand.bringToFront();status.bringToFront();connection.bringToFront();
+            bar.bringToFront();brand.bringToFront();status.bringToFront();connection.bringToFront();updateBadge.bringToFront();
             overlay.bringToFront();nightLayer.bringToFront();
         }
     }
@@ -281,6 +288,29 @@ public final class DashboardView extends FrameLayout {
     }
     private void refreshStatus(){Theme t=Theme.current();status.setText(issue!=null?issue:message);status.setTextColor(issue!=null?t.accent:t.muted);refreshBar();}
     public void connected(boolean value){haConnected=value;connection.setImageTintList(ColorStateList.valueOf(value?Theme.HA_CONNECTED:Theme.current().muted));connection.setContentDescription(value?I18n.t("Home Assistant: połączono"):I18n.t("Home Assistant: brak aktualnego połączenia"));}
+    /** Fork (UpdateCheck): the newer Helios to offer, or null. Each call with a version brings a collapsed bar back for TopBar.MESSAGE_MS. */
+    public void setUpdate(String version){
+        updateVersion=version;
+        updateBadge.setText(version==null?"":I18n.t("Aktualizuj")+" "+version);
+        updateBadge.setContentDescription(version==null?null:I18n.t("Zainstaluj nową wersję Heliosa: ")+version);
+        if(version!=null){updateUntil=android.os.SystemClock.uptimeMillis()+TopBar.MESSAGE_MS;removeCallbacks(barRefresh);postDelayed(barRefresh,TopBar.MESSAGE_MS);}
+        arrange();refreshBar();
+    }
+    public void onUpdateTap(Runnable action){updateBadge.setOnClickListener(v->action.run());}
+    /**
+     * Fork: the update button sits left of the HA icon and takes its width from the status text. It spans the bar and
+     * the gap under it (the grid starts after the gap), so the touch target is 60 units high while the pill stays 32.
+     */
+    private void arrangeBadge(float s){
+        if(updateVersion==null||measuredWidth==0)return;
+        sansPaint.setTextSize(15);
+        float w=Math.min(unitsW/3f,sansPaint.measureText(updateBadge.getText().toString())+32),pillBottom=BAR+GAP-42;
+        box(updateBadge,unitsW-64-w,0,w,BAR+GAP,s);size(updateBadge,15,s);
+        box(status,150,10,Math.max(0,unitsW-240-w-8),32,s);
+        Theme t=Theme.current();updateBadge.setTextColor(t.onColor(t.accent));
+        updateBadge.setBackground(new android.graphics.drawable.InsetDrawable(Theme.card(t.accent,16*s),0,Math.round(10*s),0,Math.round(pillBottom*s)));
+        updateBadge.setPadding(Math.round(12*s),Math.round(10*s),Math.round(12*s),Math.round(pillBottom*s));
+    }
     public void onBrandHold(Runnable action){brandHold=action;brand.setContentDescription(I18n.t("Helios. Przytrzymaj, aby otworzyć menu."));brand.setOnLongClickListener(v->{action.run();return true;});}
     /** Calls in flight by item id, kept apart from the views: a page rebuilt mid-call shows its spinner again. */
     private final Set<String> pendingIds=new HashSet<>();

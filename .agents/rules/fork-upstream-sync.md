@@ -41,13 +41,15 @@ Never push to `upstream` or `english-ui`. A pull request to upstream is a separa
 | Upstream file | Why the fork touches it | Confidence |
 |---|---|---|
 | `I18n.java`, `Translations.java`, `TranslationsTest.java` | Languages come from `Translations.CATALOGUES` (fork adds `uk`). Re-apply the list if upstream adds a language. | high |
-| `NavigationMenu.java` | `uk` label in `languageLabel`; the top bar entry and `Actions.topBarLabel/topBarToggle`. | high |
-| `MainActivity.java` | `topBarHidden()`, the two `Actions` methods, `dashboard.setBarCollapsed(...)` after `onBrandHold`. | high |
-| `DashboardView.java` | `arrange` uses `TopBar.gridTop/dotsTop`; `dispatchTouchEvent` calls `trackHold`; `setMessage`, `refreshStatus`, `onBrandHold` and `buildPage` call into the bar logic. The `*Geometry` classes are not changed. | high |
+| `NavigationMenu.java` | `uk` label in `languageLabel`; the top bar entry and `Actions.topBarLabel/topBarToggle`; the update entry label `Actions.updateLabel` and the check toggle `Actions.updateCheckLabel/updateCheckToggle`. | high |
+| `MainActivity.java` | `topBarHidden()`, the `Actions` methods for the top bar and the update check, `dashboard.setBarCollapsed(...)` and `dashboard.onUpdateTap(...)` after `onBrandHold`, `updateWatch().setListener(...)` in `onServiceConnected`. | high |
+| `DashboardView.java` | `arrange` uses `TopBar.gridTop/dotsTop` and calls `arrangeBadge`; `dispatchTouchEvent` calls `trackHold`; `setMessage`, `refreshStatus`, `refreshBar`, `onBrandHold` and `buildPage` call into the bar logic; `setUpdate`, `onUpdateTap`, `arrangeBadge` and the `updateBadge` field are fork-only. The `*Geometry` classes are not changed. | high |
+| `HeliosService.java` | `updateWatch` field and getter, start at the end of `onCreate`, stop at the start of `onDestroy`. | high |
+| `Updater.java` | `latest()` after `run()`: a metadata-only read for `UpdateCheck`. The rest of the updater is not changed. | high |
 | `AssistClient.java` | `play` uses `SpeechPlaybackWatchdog` (ported from `english-ui`, see `NOTICE`). | high |
 | `ReleaseInfo.java`, `ReleaseSourceTest.java` | `HELIOS` reads `BuildConfig.RELEASE_REPOSITORY`; the test expects that value. | high |
 | `app/build.gradle` | The fork block at the end of the file. The upstream `versionCode` and `versionName` lines stay unchanged: take the upstream values. | high |
-| `en.json`, `de.json` | Fork keys `Górny pasek`, `ukryty`, `widoczny`. | high |
+| `en.json`, `de.json` | Fork keys `Górny pasek`, `ukryty`, `widoczny`, `Aktualizuj`, `Zainstaluj nową wersję Heliosa: `, `Sprawdzanie aktualizacji`, `włączone`, `wyłączone`. | high |
 | `NOTICE` | Attribution for the ported `english-ui` commit. | high |
 
 ## Merge procedure
