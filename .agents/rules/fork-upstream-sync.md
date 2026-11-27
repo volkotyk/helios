@@ -42,7 +42,7 @@ Never push to `upstream` or `english-ui`. A pull request to upstream is a separa
 |---|---|---|
 | `I18n.java`, `Translations.java`, `TranslationsTest.java` | Languages come from `Translations.CATALOGUES` (fork adds `uk`). Re-apply the list if upstream adds a language. | high |
 | `NavigationMenu.java` | `uk` label in `languageLabel`; the top bar entry and `Actions.topBarLabel/topBarToggle`; the update entry label `Actions.updateLabel` and the check toggle `Actions.updateCheckLabel/updateCheckToggle`. | high |
-| `MainActivity.java` | `topBarHidden()`, the `Actions` methods for the top bar and the update check, `dashboard.setBarCollapsed(...)` and `dashboard.onUpdateTap(...)` after `onBrandHold`, `updateWatch().setListener(...)` in `onServiceConnected`. | high |
+| `MainActivity.java` | `topBarHidden()`, the `Actions` methods for the top bar and the update check, `dashboard.setBarCollapsed(...)` and `dashboard.onUpdateTap(...)` after `onBrandHold`, `updateWatch().setListener(...)` in `onServiceConnected` and `setListener(null)` in `onDestroy`. | high |
 | `DashboardView.java` | `arrange` uses `TopBar.gridTop/dotsTop` and calls `arrangeBadge`; `dispatchTouchEvent` calls `trackHold`; `setMessage`, `refreshStatus`, `refreshBar`, `onBrandHold` and `buildPage` call into the bar logic; `setUpdate`, `onUpdateTap`, `arrangeBadge` and the `updateBadge` field are fork-only. The `*Geometry` classes are not changed. | high |
 | `HeliosService.java` | `updateWatch` field and getter, start at the end of `onCreate`, stop at the start of `onDestroy`. | high |
 | `Updater.java` | `latest()` after `run()`: a metadata-only read for `UpdateCheck`. The rest of the updater is not changed. | high |

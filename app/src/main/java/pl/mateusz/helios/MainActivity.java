@@ -295,7 +295,7 @@ public final class MainActivity extends Activity implements AssistClient.Listene
         detachHa();stopWake();main.removeCallbacks(tick);if(voice!=null)voice.cancel();super.onPause();}
     @Override public void onDestroy(){main.removeCallbacks(toolsPoll);if(navigation!=null)navigation.close();closePanel();closeOnboarding();if(library!=null)library.close();
         // the service outlives this activity: a listener left behind holds the old view and its bitmaps
-        if(service!=null){service.setMusicListener(null);service.setAppearanceListener(null);}detachHa();try{unbindService(serviceConnection);}catch(IllegalArgumentException ignored){}stopWake();if(voice!=null)voice.cancel();audio.shutdown();network.shutdownNow();diagnostics.shutdown();super.onDestroy();}
+        if(service!=null){service.setMusicListener(null);service.setAppearanceListener(null);if(service.updateWatch()!=null)service.updateWatch().setListener(null);}detachHa();try{unbindService(serviceConnection);}catch(IllegalArgumentException ignored){}stopWake();if(voice!=null)voice.cancel();audio.shutdown();network.shutdownNow();diagnostics.shutdown();super.onDestroy();}
     private void manualTalk(){
         if(config==null||config.optBoolean("auth_invalid",false)){connect();return;}
         if(busy){if(recording)voice.finishSpeech();else voice.cancel();return;}
