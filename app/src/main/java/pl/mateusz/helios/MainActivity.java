@@ -112,10 +112,10 @@ public final class MainActivity extends Activity implements AssistClient.Listene
         @Override public void onDashboard(JSONObject raw,DashboardSpec received,Map<String,EntityStates.Entity> snapshot,String issue){
             update(()->{
                 if(received!=null&&(specRaw==null||!raw.toString().equals(specRaw.toString()))){
-                    spec=received;specRaw=raw;visibility.clear();alertOffs.clear();silencedBlinks.clear();closePanel();dashboard.setSpec(spec,MainActivity.this::tap);
+                    spec=received;specRaw=raw;visibility.clear();alertOffs.clear();silencedBlinks.clear();closePanel();dashboard.setSpec(spec,tileActions);
                     onEvent("dashboard_configured","items="+spec.items.size());
                 }
-                if(received==null&&specRaw==null){spec=DashboardSpec.fallback();dashboard.setSpec(spec,MainActivity.this::tap);}
+                if(received==null&&specRaw==null){spec=DashboardSpec.fallback();dashboard.setSpec(spec,tileActions);}
                 configIssue=issue;connectionIssue=null;states=snapshot;live=true;decideVisibility();dashboard.connected(true);renderDashboard();
                 subscribeForecast(); // the layout names the weather entity, so the forecast can only be asked for once it is here
                 scheduleDayPlans();
@@ -269,7 +269,7 @@ public final class MainActivity extends Activity implements AssistClient.Listene
         String cached=getSharedPreferences("helios",MODE_PRIVATE).getString("dashboard_v2",null);
         if(cached!=null)try{specRaw=new JSONObject(cached);spec=DashboardSpec.parse(specRaw);}catch(Exception ignored){specRaw=null;}
         if(spec==null){spec=DashboardSpec.fallback();configIssue=I18n.t(DashboardSpec.VERSION_ERROR);}
-        dashboard.setSpec(spec,this::tap);renderDashboard();
+        dashboard.setSpec(spec,tileActions);renderDashboard();
         Intent intent=new Intent(this,HeliosService.class);
         startForegroundService(intent);bindService(intent,serviceConnection,Context.BIND_AUTO_CREATE);
         if(config==null||config.optBoolean("auth_invalid",false))onboarding(false);
@@ -407,6 +407,36 @@ public final class MainActivity extends Activity implements AssistClient.Listene
     }
     private void decideVisibility(){
         for(DashboardSpec.Item item:spec.allItems())if(item.conditional())visibility.put(item.id,item.visible(states.get(item.visibleEntity)));
+    }
+    /** Fork: taps as before, plus a long press on a light tile, which opens the light panel. */
+    private final DashboardView.Actions tileActions=new DashboardView.Actions(){
+        public void onTap(DashboardSpec.Item item){tap(item);}
+        public boolean onHold(DashboardSpec.Item item){return lightPanel(item);}
+    };
+    /** Fork: brightness and colour of a light (LightPanel); each call is checked against the live state at the moment it leaves. */
+    private boolean lightPanel(DashboardSpec.Item item){
+        if(!LightControls.holds(item))return false;
+        if(!live||ha()==null){Toast.makeText(this,I18n.t("Brak połączenia z Home Assistant"),Toast.LENGTH_SHORT).show();return true;}
+        closePanel();dashboard.musicOverlay().closePanel();
+        LightPanel p=new LightPanel(this,dashboardLabel(item),new LightPanel.Host(){
+            public EntityStates.Entity state(){return states.get(item.entity);}
+            public boolean live(){return live;}
+            public String send(String service,JSONObject data){
+                HaDashboardClient client=ha();
+                if(!live||client==null)return I18n.t("Brak połączenia z Home Assistant");
+                EntityStates.Entity e=states.get(item.entity);
+                if(e==null||!e.known()||!("turn_on".equals(service)||"turn_off".equals(service)))return I18n.t("Niedozwolone polecenie");
+                onEvent("service_call","light."+service+" "+item.entity+(data==null?"":" "+data));
+                client.callService("light",service,item.entity,data,error->main.post(()->{
+                    if(error!=null){onEvent("service_error",error);Toast.makeText(MainActivity.this,I18n.t("Nie wykonano: ")+error,Toast.LENGTH_LONG).show();}
+                }));
+                return null;
+            }
+        });
+        p.dialog.setOnCancelListener(d->{panel=null;panelItem=null;panelRefresh=null;});
+        panel=p.dialog;panelItem=item;panelRefresh=p::refresh;
+        p.show();
+        return true;
     }
     private void tap(DashboardSpec.Item item){
         ActionPolicy.Panel panel=ActionPolicy.panel(item.action);

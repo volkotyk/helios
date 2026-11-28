@@ -362,6 +362,7 @@ final class DashboardSpec {
             for(Cover c:i.covers)out.computeIfAbsent(c.entity,k->new HashSet<>()).addAll(COVER_ATTRIBUTES);
             if(i.forecastEntity!=null)out.computeIfAbsent(i.forecastEntity,k->new HashSet<>()).addAll(FORECAST_ATTRIBUTES);
             if(i.attribute!=null)out.computeIfAbsent(i.entity,k->new HashSet<>()).add(i.attribute);
+            if(LightControls.holds(i))out.computeIfAbsent(i.entity,k->new HashSet<>()).addAll(LightControls.ATTRIBUTES); // fork: the light panel
             if(i.temperatureEntity!=null)out.computeIfAbsent(i.temperatureEntity,k->new HashSet<>()).add("unit_of_measurement"); // the weather tile shows the sensor's own unit, never a default
             for(String extra:new String[]{i.loadEntity,i.batteryEntity})if(extra!=null)out.computeIfAbsent(extra,k->new HashSet<>()).add("unit_of_measurement");
         }

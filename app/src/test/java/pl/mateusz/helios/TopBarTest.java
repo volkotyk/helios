@@ -42,4 +42,19 @@ public class TopBarTest {
         assertTrue(TopBar.dotsTop(false)+6<=TopBar.gridTop(false)+DashboardView.GAP);
         assertTrue(TopBar.dotsTop(false)>=32+10); // under the bar text (10..42)
     }
+
+    @Test public void menuHoldWorksOnlyInTheTopLeftCorner() {
+        float scale=1.5f; // 1200 x 720 pixels for the 800 x 480 grid
+        assertTrue(TopBar.inMenuCorner(0,0,scale));
+        assertTrue(TopBar.inMenuCorner(TopBar.MENU_CORNER_W*scale-1,TopBar.MENU_CORNER_H*scale-1,scale));
+        assertFalse(TopBar.inMenuCorner(TopBar.MENU_CORNER_W*scale,10,scale));
+        assertFalse(TopBar.inMenuCorner(10,TopBar.MENU_CORNER_H*scale,scale));
+        assertFalse(TopBar.inMenuCorner(600,300,scale)); // the middle of the grid belongs to the tiles
+        assertFalse(TopBar.inMenuCorner(-1,10,scale));
+        assertFalse(TopBar.inMenuCorner(10,10,0));
+    }
+
+    @Test public void menuCornerIsABigEnoughTouchTarget() {
+        assertTrue(TopBar.MENU_CORNER_W>=64&&TopBar.MENU_CORNER_H>=64);
+    }
 }

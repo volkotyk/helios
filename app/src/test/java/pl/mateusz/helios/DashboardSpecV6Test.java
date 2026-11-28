@@ -60,7 +60,8 @@ public class DashboardSpecV6Test {
         List<String> entities=spec.entities();
         for(String e:new String[]{"weather.forecast_dom","light.salon","lock.drzwi","cover.a","scene.noc","cover.brama","binary_sensor.wieczor","sensor.swiatla"})assertTrue(e,entities.contains(e));
         assertEquals(new HashSet<>(Arrays.asList("friendly_name","icon","unit_of_measurement","device_class","humidity")),spec.attributes().get("sensor.czujnik_salon"));
-        assertEquals(new HashSet<>(DashboardSpec.TILE_ATTRIBUTES),spec.attributes().get("light.salon"));
+        Set<String> salon=new HashSet<>(DashboardSpec.TILE_ATTRIBUTES);salon.addAll(LightControls.ATTRIBUTES); // fork: a light also keeps what the light panel reads
+        assertEquals(salon,spec.attributes().get("light.salon"));
         // a lock whose confirmation is switched off in the config still asks: parse refuses the document instead
         rejects(with("zamek","confirmation",new JSONObject().put("enabled",false)),"lock without confirmation");
         // tap_action: none makes a tile display-only

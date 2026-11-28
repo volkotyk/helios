@@ -7,8 +7,10 @@ package pl.mateusz.helios;
 final class TopBar {
     /** How long a status message keeps a collapsed bar on screen. */
     static final long MESSAGE_MS=8000;
-    /** A finger held this long anywhere on the dashboard opens the menu while the bar, and so the HELIOS label, is collapsed. */
+    /** A finger held this long in the menu corner opens the menu while the bar, and so the HELIOS label, is collapsed. */
     static final long HOLD_MS=1000;
+    /** The menu corner, in screen units from the top-left edge. A hold anywhere else belongs to the tile under the finger (its long press). */
+    static final int MENU_CORNER_W=96,MENU_CORNER_H=72;
     /** The page dots sit in the strip under the bar, or in the top gap of the grid when the bar is collapsed. */
     static final int DOTS_TOP=44,DOTS_TOP_COLLAPSED=1;
     private TopBar(){}
@@ -22,5 +24,9 @@ final class TopBar {
     /** The same, plus an update notice (UpdateCheck) that is still fresh: it brings a collapsed bar back for MESSAGE_MS, so its button can be tapped. */
     static boolean shown(boolean collapsed,String issue,String message,boolean fresh,boolean updateFresh){
         return shown(collapsed,issue,message,fresh)||updateFresh;
+    }
+    /** True when a touch at (x, y) in pixels falls in the menu corner of a dashboard drawn at this scale. */
+    static boolean inMenuCorner(float x,float y,float scale){
+        return scale>0&&x>=0&&y>=0&&x<MENU_CORNER_W*scale&&y<MENU_CORNER_H*scale;
     }
 }

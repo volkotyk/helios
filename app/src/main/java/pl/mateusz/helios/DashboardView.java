@@ -14,7 +14,9 @@ import java.util.*;
 
 /** Fixed top bar plus a grid of large tiles rendered from DashboardSpec (4x3 on the clock, 3x3 on a square screen); nothing here comes from YAML except tile content. */
 public final class DashboardView extends FrameLayout {
-    public interface Actions { void onTap(DashboardSpec.Item item); }
+    public interface Actions { void onTap(DashboardSpec.Item item);
+        /** Fork: a long press on a light tile; true when it opened something, so the tap that would end the press is not sent. */
+        default boolean onHold(DashboardSpec.Item item){return false;} }
     static final int WIDTH=800,HEIGHT=480,BAR=52,GAP=8;
     private final TextView brand,status;
     private final LinearLayout nightLayer;private final TextView nightTime,nightDate;
@@ -51,7 +53,7 @@ public final class DashboardView extends FrameLayout {
     private Map<String,EntityStates.Entity> lastStates;private Map<String,Boolean> lastVisibility;private boolean lastLive;
     private int measuredWidth,measuredHeight;
     private float scale=1;
-    /** Fork: a collapsed bar gives its height to the grid (TopBar); the menu then opens on a long hold anywhere. */
+    /** Fork: a collapsed bar gives its height to the grid (TopBar); the menu then opens on a long hold in the top-left corner. */
     private boolean barCollapsed;private long messageUntil;private Runnable brandHold;
     private final Runnable barRefresh=this::refreshBar,menuHold=this::holdMenu;
     private float holdX,holdY;private boolean holdFired;
@@ -205,12 +207,12 @@ public final class DashboardView extends FrameLayout {
         if(trackHold(e))return true;
         return super.dispatchTouchEvent(e);
     }
-    /** Fork: with the bar collapsed, a still finger held for TopBar.HOLD_MS opens the menu; true while the rest of that gesture is swallowed. */
+    /** Fork: with the bar collapsed, a still finger held for TopBar.HOLD_MS in the menu corner opens the menu; true while the rest of that gesture is swallowed. */
     private boolean trackHold(MotionEvent e){
         switch(e.getActionMasked()){
             case MotionEvent.ACTION_DOWN:
                 holdFired=false;removeCallbacks(menuHold);
-                if(barCollapsed&&brandHold!=null&&!overlay.isOpen()&&!nightVisible()){holdX=e.getX();holdY=e.getY();postDelayed(menuHold,TopBar.HOLD_MS);}
+                if(barCollapsed&&brandHold!=null&&!overlay.isOpen()&&!nightVisible()&&TopBar.inMenuCorner(e.getX(),e.getY(),scale)){holdX=e.getX();holdY=e.getY();postDelayed(menuHold,TopBar.HOLD_MS);}
                 return false;
             case MotionEvent.ACTION_MOVE:
                 if(Math.hypot(e.getX()-holdX,e.getY()-holdY)>android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop())removeCallbacks(menuHold);
@@ -426,6 +428,7 @@ public final class DashboardView extends FrameLayout {
             title.setText(label);if(label.isEmpty())title.setVisibility(GONE);
             head.setVisibility(label.isEmpty()&&(inlineIcon||shownIcon==null)?GONE:VISIBLE);
             if(item.interactive()){setClickable(true);setFocusable(true);setOnClickListener(v->{if(actions!=null&&!voidTap)actions.onTap(item);});}
+            if(LightControls.holds(item)){setLongClickable(true);setOnLongClickListener(v->{if(actions==null||voidTap||!actions.onHold(item))return false;DashboardView.this.removeCallbacks(menuHold);return true;});} // fork: brightness and colour; the panel wins over a menu hold in the corner
             theme();
             if(clock)clock();
         }
