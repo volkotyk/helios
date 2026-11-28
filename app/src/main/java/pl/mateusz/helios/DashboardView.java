@@ -369,6 +369,7 @@ public final class DashboardView extends FrameLayout {
         final List<TextView> readingLabels=new ArrayList<>(),readingValues=new ArrayList<>();
         final ProgressBar spinner;
         final boolean clock;
+        final boolean nameFirst; // fork: TileEmphasis - a large name over a small state
         float unitW,unitH;
         boolean live=true,accent,known=true;long forecastExpiresAt;
         String rowsKey=""; // the second half is rebuilt only when what it shows actually changes
@@ -377,6 +378,7 @@ public final class DashboardView extends FrameLayout {
         String shownIcon; // the config icon, or the entity's own when the body prefers it
         Tile(DashboardSpec.Item item){
             super(DashboardView.this.getContext());this.item=item;def=CardDefinition.of(item.type);body=CardBodies.FOR.get(item.type);clock=def.layout==CardDefinition.Layout.CLOCK;shownIcon=item.icon;
+            nameFirst=def.layout==CardDefinition.Layout.FIT&&TileEmphasis.nameFirst(item.type,item.entity,item.attribute);
             split=new LinearLayout(getContext());split.setOrientation(LinearLayout.HORIZONTAL);addView(split,new LayoutParams(-1,-1));
             column=new LinearLayout(getContext());column.setOrientation(LinearLayout.VERTICAL);column.setGravity(Gravity.CENTER_VERTICAL);split.addView(column,new LinearLayout.LayoutParams(0,-1,1));
             rule=new View(getContext());rule.setVisibility(GONE);split.addView(rule,new LinearLayout.LayoutParams(1,-1));
@@ -438,7 +440,7 @@ public final class DashboardView extends FrameLayout {
             boolean attention=def.notifies&&item.conditional()&&live;
             if(attention)setBackground(Theme.card(!photo?t.attentionSurface:(0xEB000000|(t.attentionSurface&0xFFFFFF)),Theme.ATTENTION,2*scale,r));
             else setBackground(Theme.card(surface(t),r));
-            title.setTextColor(attention?Theme.ATTENTION:t.muted);detail.setTextColor(t.muted);detail2.setTextColor(t.muted);
+            title.setTextColor(attention?Theme.ATTENTION:nameFirst&&live?t.text:t.muted);detail.setTextColor(t.muted);detail2.setTextColor(t.muted);
             value.setTextColor(!live?t.muted:attention?Theme.ATTENTION:t.text);
             for(TextView labelText:readingLabels)labelText.setTextColor(t.muted);
             for(TextView reading:readingValues)reading.setTextColor(live?t.text:t.muted);
@@ -477,6 +479,10 @@ public final class DashboardView extends FrameLayout {
                     }
                     float fit=TextFit.size((text,size)->{sansPaint.setTextSize(size);return sansPaint.measureText(text);},value.getText().toString(),inner,24,def.layout==CardDefinition.Layout.BIG_FIT?44:28);
                     size(value,fit,s);size(detail,17,s);
+                    if(nameFirst){ // fork: the name fits the room beside its icon, the state drops to the old title size
+                        size(title,TextFit.size((text,size)->{sansPaint.setTextSize(size);return sansPaint.measureText(text);},title.getText().toString(),inner-(shownIcon==null?0:34),TileEmphasis.NAME_MIN,TileEmphasis.NAME_MAX),s);
+                        size(value,TileEmphasis.STATE,s);
+                    }
                 }
             }
             int spin=Math.round(28*s);LayoutParams sp=new LayoutParams(spin,spin,Gravity.TOP|Gravity.END);sp.topMargin=sp.rightMargin=Math.round(10*s);spinner.setLayoutParams(sp);

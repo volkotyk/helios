@@ -2,6 +2,13 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-28] feature | larger tile name over a small state (test release for the auto-update)
+- New pure class `TileEmphasis` (+ `TileEmphasisTest`): a FIT tile of type `entity`, `tile` or `light` whose entity domain is `automation`, `script`, `scene`, `switch`, `input_boolean`, `light`, `fan`, `button` or `input_button`, without `attribute`, shows its name at 19..26 units (fitted to the width beside the icon, text color) and its state at 17. Sensors, binary sensors, locks, covers and attribute readings keep the upstream sizes.
+- Purpose: the owner asked for it, and its release is the first one that a clock on 0.21.186 should find through the automatic update check.
+- Verified: `testDebugUnitTest assembleDebug lintDebug` with the CI properties. Not checked on a clock: long names, German and Ukrainian names, the 3x3 square layout.
+- roles: Frontend Developer, Android Developer, QA Engineer
+- fork-only: yes; upstream files touched: `DashboardView.java`
+
 ## [2026-11-27] feature | automatic update check with a one-tap install
 - New pure class `UpdateCheck` (+ `UpdateCheckTest`): first check 2 min after the service starts, then every 6 h; each failure doubles the wait from 15 min up to 6 h; never sooner than 2 min. It offers a stored version only while it is newer than `BuildConfig.VERSION_NAME`, so an installed update clears the offer.
 - New glue `UpdateWatch` in `HeliosService`: calls the new `Updater.latest()` (metadata only, the same `ReleaseInfo.parse` and `Updater.decision`, no status, no download) on the `network` executor. Prefs in `helios`: `update_check_off`, `update_checked_at`, `update_check_failures`, `update_found`. The attempt time is stored before the request, so a restart loop cannot exceed the limit.
