@@ -475,8 +475,11 @@ public final class DashboardView extends FrameLayout {
                         int px=Math.round(40*s);LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(px,px);vp.rightMargin=Math.round(6*s);valueIcon.setLayoutParams(vp);
                         if(valueIcon.getVisibility()==VISIBLE)inner-=46;
                     }
-                    float fit=TextFit.size((text,size)->{sansPaint.setTextSize(size);return sansPaint.measureText(text);},value.getText().toString(),inner,24,def.layout==CardDefinition.Layout.BIG_FIT?44:28);
+                    boolean bigFit=def.layout==CardDefinition.Layout.BIG_FIT;
+                    float fit=TextFit.size((text,size)->{sansPaint.setTextSize(size);return sansPaint.measureText(text);},value.getText().toString(),inner,bigFit?24:14,bigFit?44:18);
                     size(value,fit,s);size(detail,17,s);
+                    // fork: a FIT tile reads its name first, so the name is larger than the state under it
+                    if(!bigFit)size(title,TextFit.size((text,size)->{sansPaint.setTextSize(size);return sansPaint.measureText(text);},title.getText().toString(),inner-(shownIcon==null?0:34),19,24),s);
                 }
             }
             int spin=Math.round(28*s);LayoutParams sp=new LayoutParams(spin,spin,Gravity.TOP|Gravity.END);sp.topMargin=sp.rightMargin=Math.round(10*s);spinner.setLayoutParams(sp);

@@ -2,6 +2,14 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-27] feature | tile name larger than its state (test release for the in-app update)
+- `DashboardView.Tile.scale`, FIT layout only: the title fits 19-24 units (was a fixed 17), the value fits 14-18 units (was 24-28). BIG_FIT, LARGE_VALUE, ROWS and CLOCK are not changed. The owner asked for it on the clock to test an update over the air.
+- Risk: a FIT tile that shows a reading (`entity`, `tile` with a sensor) now shows the number smaller than its name.
+- Verified: `testDebugUnitTest assembleDebug lintDebug` with `-PheliosVersionName=0.21.999 -PheliosVersionCode=100999 -PheliosReleaseRepository=volkotyk/helios`. No new unit test: the change is two text sizes in View glue.
+- roles: Frontend Developer, DevOps / Build Engineer
+- fork-only: yes; upstream files touched: `DashboardView.java`
+- pages: `.agents/rules/fork-upstream-sync.md`
+
 ## [2026-11-27] feature | automatic update check with a one-tap install
 - New pure class `UpdateCheck` (+ `UpdateCheckTest`): first check 2 min after the service starts, then every 6 h; each failure doubles the wait from 15 min up to 6 h; never sooner than 2 min. It offers a stored version only while it is newer than `BuildConfig.VERSION_NAME`, so an installed update clears the offer.
 - New glue `UpdateWatch` in `HeliosService`: calls the new `Updater.latest()` (metadata only, the same `ReleaseInfo.parse` and `Updater.decision`, no status, no download) on the `network` executor. Prefs in `helios`: `update_check_off`, `update_checked_at`, `update_check_failures`, `update_found`. The attempt time is stored before the request, so a restart loop cannot exceed the limit.
