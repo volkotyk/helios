@@ -2,6 +2,17 @@
 
 Newest entries go at the top. Format: [kb_maintenance_rules.md](rules/kb_maintenance_rules.md) § Log.
 
+## [2026-11-28] feature | light panel on a long press, menu hold only in the top-left corner
+- Collapsed bar: the 1 s menu hold now starts only in the top-left corner (`TopBar.MENU_CORNER_W/H` = 96 x 72 units, `TopBar.inMenuCorner`). Before, a hold anywhere opened the menu and cancelled the tile under the finger, so tiles had no long press.
+- New pure class `LightControls` (+ `LightControlsTest`): which controls a light supports, from `supported_color_modes` (brightness, `color_temp`, hs/xy/rgb/rgbw/rgbww); current values stay -1 when unknown; service data `brightness_pct` 1-100, `color_temp_kelvin` clamped to the light's range (2000-6500 K when it reports none), `hs_color` [hue, 100]. Never mireds.
+- New glue `LightPanel`: on/off switch, brightness, white temperature and a hue slider; a slider sends one `light.turn_on` when the finger lifts and is not moved by a refresh while it is held. `MainActivity.lightPanel` re-checks live HA, a known entity and `turn_on`/`turn_off` only before each call.
+- `DashboardView.Actions` gets a default `onHold`; a tile whose entity is `light.*` gets a long-click listener. Other tiles keep the old behavior. `DashboardSpec.attributes()` keeps `LightControls.ATTRIBUTES` for light entities.
+- New strings `Kolor`, `Temperatura bieli: ` in en, de, uk. Reused `Jasność: `, `Włączone`, `Zamknij`.
+- Security: no new permission, host or command type; service data is built in code, never from config text.
+- Verified in a cloud container without the Android SDK: `javac` of all main and test sources against the Robolectric android-all 10 jar, then the JUnit suite: 279 tests, 10 failures that also fail on the base commit (Android stubs: AppearanceTest, ThemeTest, UpdaterTest, OverlayGeometryTest). `TranslationsTest`, `TopBarTest`, `LightControlsTest`, `DashboardSpecV6Test` pass. Gradle `testDebugUnitTest assembleDebug lintDebug` runs in CI on the PR. Not checked on a clock: the long press, the sliders, the light reaction.
+- roles: Android Developer, Frontend Developer, Localization Translator, QA Engineer, Critic
+- fork-only: yes; upstream files touched: `DashboardView.java`, `MainActivity.java`, `DashboardSpec.java`, `DashboardSpecV6Test.java`, `en.json`, `de.json`
+
 ## [2026-11-27] feature | tile name larger than its state (test release for the in-app update)
 - `DashboardView.Tile.scale`, FIT layout only: the title fits 19-24 units (was a fixed 17), the value fits 14-18 units (was 24-28). BIG_FIT, LARGE_VALUE, ROWS and CLOCK are not changed. The owner asked for it on the clock to test an update over the air.
 - Risk: a FIT tile that shows a reading (`entity`, `tile` with a sensor) now shows the number smaller than its name.
